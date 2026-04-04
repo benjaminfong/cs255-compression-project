@@ -1,1 +1,5 @@
 /venv
+examples/customers-1000000.csv
+examples/out
+examples/out.csv
+out
