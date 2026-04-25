@@ -98,7 +98,7 @@ def main():
     # get command line arguments
     if len(sys.argv) != 4 or (sys.argv[3] != "-e" and sys.argv[3] != "-d"):
         print("Please provide the proper command line arguments.")
-        print("Usage: python run-length.py <input-file> <output-file> <-e for encode or -d for decode>")
+        print("Usage: python LZW.py <input-fi le> <output-file> <-e for encode or -d for decode>")
         exit()
     operation = sys.argv[3]
     input_file = sys.argv[1]
