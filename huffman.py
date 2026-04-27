@@ -1,5 +1,5 @@
-import argparse
 import os
+import sys
 import heapq
 import json
 import struct
@@ -22,9 +22,7 @@ class HuffmanNode:
         return self.freq > other.freq
 
 
-def encode(input, output):
-    with open(input, "rb") as file:
-        data = file.read()
+def encode(data):
 
     # get byte frequencies
     frequency = {}
@@ -64,7 +62,7 @@ def encode(input, output):
         bit_string += huffman_codes[byte]
 
     # determine padding needed and add to bit string
-    padding = len(bit_string) % 8
+    padding = (8 - len(bit_string) % 8) % 8
     bit_string += "0" * padding
 
     # convert bit string to bytes
@@ -75,20 +73,16 @@ def encode(input, output):
     # serialize decoder dict to bytes via JSON
     decoder_bytes = json.dumps(decoder).encode("utf-8")
 
-    # write decoder length, decoder, padding length, encoded data
-    with open(output, "wb") as file:
-        file.write(struct.pack(">I", len(decoder_bytes)))
-        file.write(decoder_bytes)
-        file.write(bytes([padding]))
-        file.write(encoded_bytes)
+    # return decoder length, decoder, padding length, encoded data
+    return struct.pack(">I", len(decoder_bytes)) + decoder_bytes + bytes([padding]) + bytes(encoded_bytes)
     
-def decode(input, output):
-    # read decoder length, decoder, padding length, encoded data
-    with open(input, "rb") as file:
-        decoder_len = struct.unpack(">I", file.read(4))[0]
-        decoder = json.loads(file.read(decoder_len).decode("utf-8"))
-        padding = file.read(1)[0]
-        encoded_bytes = file.read()
+    
+    
+def decode(data):
+    decoder_len = struct.unpack(">I", data[:4])[0]
+    decoder = json.loads(data[4:4 + decoder_len].decode("utf-8"))
+    padding = data[4 + decoder_len]
+    encoded_bytes = data[5 + decoder_len:]
 
     # convert encoded bytes to bit string
     bit_string = ""
@@ -98,7 +92,7 @@ def decode(input, output):
             bits = bits[:8 - padding]
         bit_string += bits
 
-    # walk the bit string and match against huffman codes
+    # iterate through the bit string and match against huffman codes
     decoded_data = bytearray()
     current_code = ""
     for bit in bit_string:
@@ -107,25 +101,30 @@ def decode(input, output):
             decoded_data.append(decoder[current_code])
             current_code = ""
 
-    with open(output, "wb") as file:
-        file.write(decoded_data)
+    return bytes(decoded_data)
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+def main():
+        # get command line arguments
+    if len(sys.argv) != 4 or (sys.argv[3] != "-e" and sys.argv[3] != "-d"):
+        print("Please provide the proper command line arguments.")
+        print("Usage: python huffman.py <input-file> <output-file> <-e for encode or -d for decode>")
+        exit()
+    operation = sys.argv[3]
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
 
-    # encode or decode
-    parser.add_argument("--input", type=str, required=True)
-    parser.add_argument("--output", type=str, required=True)
-    parser.add_argument("--mode", type=str, required=True)
+    with open(input_file, "rb") as file:
+        data = file.read()
 
-    
-    args = parser.parse_args()
-    if not os.path.exists(args.input):
-        print("Input file does not exist")
-    elif args.mode == "e":
-        code = encode(args.input, args.output)
-    elif args.mode == "d":
-        decode(args.input, args.output)
+    if operation == "-e":
+        result = encode(data)
+    elif operation == "-d":
+        result = decode(data)
     else:
         print("Invalid mode")
+
+    with open(output_file, "wb") as file:
+        file.write(result)
         
+if __name__ == "__main__":
+    main()
